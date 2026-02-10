@@ -1,0 +1,26 @@
+# --- Secrets (NEVER UPLOAD) ---
+.env
+.env.*
+secrets.h
+passwordfile
+aclfile
+mosquitto/config/passwordfile
+mosquitto/config/aclfile
+
+# --- Docker & Data (Keep folders, ignore contents) ---
+mosquitto/data/*
+!mosquitto/data/.gitkeep
+mosquitto/log/*
+!mosquitto/log/.gitkeep
+postgres/data/
+pgdata/
+
+# --- Python ---
+__pycache__/
+*.pyc
+ingester/venv/
+ingester/.pytest_cache/
+
+# --- OS Junk ---
+.DS_Store
+Thumbs.db
