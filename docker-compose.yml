@@ -24,14 +24,21 @@ services:
     volumes:
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   ingester:
     build: ./ingester
     container_name: homelab-ingester
     restart: unless-stopped
     depends_on:
-      - mosquitto
-      - postgres
+      mosquitto:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     environment:
       MQTT_HOST: ${MQTT_HOST}
       MQTT_PORT: ${MQTT_PORT}
@@ -44,5 +51,22 @@ services:
       PGDATABASE: ${POSTGRES_DB}
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 volumes:
   pgdata:
+  grafana_data:
