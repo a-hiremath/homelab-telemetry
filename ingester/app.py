@@ -2,6 +2,7 @@ import json
 import os
 import time
 import traceback
+import zoneinfo
 from datetime import datetime
 
 import psycopg2
@@ -29,7 +30,17 @@ def parse_ts(ts):
     if not ts or not isinstance(ts, str):
         return None
     try:
-        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        # Parse the naive string from the ESP
+        dt_naive = datetime.fromisoformat(ts)
+        
+        # Localize it to Pacific Time (matches the ESP's -8 offset)
+        tz_pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
+        dt_pacific = dt_naive.replace(tzinfo=tz_pacific)
+        
+        # Convert to UTC for safe database storage
+        dt_utc = dt_pacific.astimezone(zoneinfo.ZoneInfo("UTC"))
+        
+        return dt_utc
     except Exception:
         return None
 
@@ -90,13 +101,19 @@ def on_message(client, userdata, msg):
     pg = userdata["pg"]
     try:
         raw = msg.payload.decode("utf-8", errors="replace")
-        ev = json.loads(raw)
+        payload = json.loads(raw)
 
-        event_id, device_id = insert_event(pg, ev)
+        # Normalize the payload to always be a list
+        events = payload if isinstance(payload, list) else [payload]
 
-        ack = {"schema": ev.get("schema", 1), "event_id": event_id, "device_id": device_id, "status": "stored"}
-        ack_topic = ACK_TEMPLATE.format(device_id=device_id)
-        client.publish(ack_topic, json.dumps(ack), qos=1, retain=False)
+        # Loop through and process each event
+        for ev in events:
+            event_id, device_id = insert_event(pg, ev)
+
+            # Publish an individual ACK for each stored event
+            ack = {"schema": ev.get("schema", 1), "event_id": event_id, "device_id": device_id, "status": "stored"}
+            ack_topic = ACK_TEMPLATE.format(device_id=device_id)
+            client.publish(ack_topic, json.dumps(ack), qos=1, retain=False)
 
     except Exception as e:
         log(f"INGEST ERROR: {e}")
