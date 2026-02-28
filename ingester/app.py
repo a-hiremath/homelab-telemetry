@@ -76,7 +76,10 @@ def insert_event(conn, ev: dict):
     value_num = float(value) if isinstance(value, (int, float)) else None
     value_text = None if value_num is not None or value is None else str(value)
 
-    ts_device = parse_ts(ev.get("ts_device"))
+    # Canonical device timestamp field is `ts_device`.
+    # Keep `timestamp` as a backwards-compatible fallback for older firmware.
+    ts_device_raw = ev.get("ts_device") or ev.get("timestamp")
+    ts_device = parse_ts(ts_device_raw)
     meta = ev.get("meta") or {}
 
     with conn.cursor() as cur:
