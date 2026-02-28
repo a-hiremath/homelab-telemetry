@@ -3,7 +3,7 @@ import os
 import time
 import traceback
 import zoneinfo
-from datetime import datetime
+from datetime import datetime, timezone
 
 import psycopg2
 from psycopg2.extras import Json
@@ -15,6 +15,7 @@ MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 EVENTS_TOPIC = os.getenv("MQTT_EVENTS_TOPIC", "qs/v1/+/events")
 ACK_TEMPLATE = os.getenv("ACK_TEMPLATE", "qs/v1/{device_id}/acks")
 DEADLETTER_TOPIC = os.getenv("MQTT_DEADLETTER_TOPIC", "qs/v1/deadletter")
+DEVICE_DEFAULT_TZ = os.getenv("DEVICE_DEFAULT_TZ", "UTC")
 
 # ---- Postgres ----
 PGHOST = os.getenv("PGHOST", "postgres")
@@ -29,19 +30,30 @@ def log(msg: str):
 def parse_ts(ts):
     if not ts or not isinstance(ts, str):
         return None
+
+    ts_clean = ts.strip()
+    if not ts_clean:
+        return None
+
     try:
-        # Parse the naive string from the ESP
-        dt_naive = datetime.fromisoformat(ts)
-        
-        # Localize it to Pacific Time (matches the ESP's -8 offset)
-        tz_pacific = zoneinfo.ZoneInfo("America/Los_Angeles")
-        dt_pacific = dt_naive.replace(tzinfo=tz_pacific)
-        
-        # Convert to UTC for safe database storage
-        dt_utc = dt_pacific.astimezone(zoneinfo.ZoneInfo("UTC"))
-        
-        return dt_utc
-    except Exception:
+        # Accept canonical ISO-8601 UTC suffix.
+        if ts_clean.endswith("Z"):
+            ts_clean = ts_clean[:-1] + "+00:00"
+
+        dt = datetime.fromisoformat(ts_clean)
+
+        # Preserve ESP-provided offsets; only apply configured fallback for naive timestamps.
+        if dt.tzinfo is None:
+            try:
+                fallback_tz = zoneinfo.ZoneInfo(DEVICE_DEFAULT_TZ)
+            except Exception as e:
+                log(f"Invalid DEVICE_DEFAULT_TZ '{DEVICE_DEFAULT_TZ}': {e}; using UTC fallback")
+                fallback_tz = timezone.utc
+            dt = dt.replace(tzinfo=fallback_tz)
+
+        return dt.astimezone(timezone.utc)
+    except Exception as e:
+        log(f"Invalid ts_device '{ts}': {e}")
         return None
 
 def connect_pg():
