@@ -141,9 +141,12 @@ sys_interval 10                 # Publish $SYS metrics every 10s
 
 | Field | Type | Description |
 |-------|------|-------------|
+
+> Canonical field is `ts_device`. The ingester also accepts legacy `timestamp` for backwards compatibility.
+
 | `value` | number/string | Event value (auto-detected as numeric or text) |
 | `unit` | string | Unit of measurement |
-| `ts_device` | ISO-8601 | Timestamp from device clock |
+| `ts_device` | ISO-8601 | Canonical timestamp from device clock (`timestamp` accepted as legacy fallback) |
 | `meta` | object | Arbitrary metadata (stored as JSONB) |
 
 ### Example Event
@@ -400,6 +403,9 @@ void publishEvent(const char* eventType, float value, const char* unit) {
   doc["event_type"] = eventType;
   doc["value"] = value;
   doc["unit"] = unit;
+  // Canonical device timestamp field expected by the ingester
+  // (older firmware may have used `timestamp`, which is still accepted as fallback).
+  doc["ts_device"] = "2024-02-10T00:00:00";
 
   char buffer[256];
   serializeJson(doc, buffer);
