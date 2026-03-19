@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec:*)",
+      "Bash(docker compose exec:*)",
+      "WebSearch",
+      "WebFetch(domain:cloud.ouraring.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:support.mydatahelps.org)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cd:*)"
+    ]
+  }
+}

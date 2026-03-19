@@ -53,6 +53,35 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
 
+  oura_poller:
+    build: ./oura_poller
+    container_name: homelab-oura-poller
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      OURA_PAT: ${OURA_PAT}
+      OURA_BACKFILL_START: ${OURA_BACKFILL_START:-2026-01-01}
+      LOCAL_TZ: ${LOCAL_TZ:-America/Los_Angeles}
+      OURA_CHUNK_DAYS: ${OURA_CHUNK_DAYS:-14}
+      OURA_LOOKBACK_DAYS: ${OURA_LOOKBACK_DAYS:-3}
+
+  derive_features:
+    build: ./derive_features
+    container_name: homelab-derive-features
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      LOCAL_TZ: ${LOCAL_TZ:-America/Los_Angeles}
+      PERSONAL_SLEEP_NEED_H: ${PERSONAL_SLEEP_NEED_H:-7.5}
+      PROCESS_S_TAU_W: ${PROCESS_S_TAU_W:-18.0}
+      PROCESS_S_TAU_S: ${PROCESS_S_TAU_S:-4.5}
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana

@@ -20,6 +20,10 @@ __pycache__/
 *.pyc
 ingester/venv/
 ingester/.pytest_cache/
+oura_poller/venv/
+oura_poller/.pytest_cache/
+derive_features/venv/
+derive_features/.pytest_cache/
 
 # --- OS Junk ---
 .DS_Store

@@ -30,6 +30,9 @@ A self-hosted IoT data ingestion system for collecting, storing, and acknowledgi
 | mosquitto | eclipse-mosquitto:2 | 1883, 9001 | MQTT message broker |
 | postgres | postgres:16 | 5432 | Time-series event storage |
 | ingester | homelab-ingester | - | MQTT-to-PostgreSQL bridge |
+| oura_poller | homelab-oura-poller | - | Oura Ring API poller |
+| derive_features | homelab-derive-features | - | Feature engineering and timeseries expansion |
+| grafana | grafana/grafana:latest | 3000 | Data visualization dashboards |
 
 ## Project Structure
 
@@ -38,23 +41,35 @@ homelab/
 ├── .env                          # Environment variables
 ├── docker-compose.yml            # Service orchestration
 ├── README.md                     # This file
+├── AGENTS.md                     # Agent interaction guidelines
+├── plan.md                       # Implementation plans
 │
 ├── mosquitto/
 │   ├── config/
 │   │   └── mosquitto.conf        # Broker configuration
-│   ├── data/
-│   │   └── mosquitto.db          # Persisted messages
-│   └── log/
-│       └── mosquitto.log         # Connection and message logs
+│   ├── data/                     # Persisted messages
+│   └── log/                      # Connection and message logs
 │
 ├── postgres/
 │   └── init/
-│       └── 001_schema.sql        # Database schema (auto-runs on first boot)
+│       ├── 001_schema.sql        # Core telemetry schema
+│       ├── 002_oura_schema.sql   # Oura Ring data schema
+│       └── 003_derive_schema.sql # Derived features schema
 │
-└── ingester/
+├── ingester/
+│   ├── Dockerfile                # Container build recipe
+│   ├── requirements.txt          # Python dependencies
+│   └── app.py                    # MQTT subscriber and DB writer
+│
+├── oura_poller/
+│   ├── Dockerfile                # Container build recipe
+│   ├── requirements.txt          # Python dependencies
+│   └── poller.py                 # Oura API poller
+│
+└── derive_features/
     ├── Dockerfile                # Container build recipe
     ├── requirements.txt          # Python dependencies
-    └── app.py                    # MQTT subscriber and DB writer
+    └── derive.py                 # Feature engineering job
 ```
 
 ## Quick Start
